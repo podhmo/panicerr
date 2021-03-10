@@ -2,10 +2,14 @@ package panicerr
 
 import (
 	"fmt"
+	"io"
 	"runtime/debug"
 )
 
-var ErrFormat = "%s %s"
+var (
+	ErrFormat        = "%s %s"
+	ErrVerboseFormat = "%s %+v\n%s"
+)
 
 type Err struct {
 	prefix string
@@ -22,6 +26,21 @@ func (e *Err) Stack() string {
 }
 func (e *Err) Unwrap() error {
 	return e.inner
+}
+
+func (e *Err) Format(s fmt.State, verb rune) {
+	switch verb {
+	case 'v':
+		if s.Flag('+') {
+			fmt.Fprintf(s, ErrVerboseFormat, e.prefix, e.inner, e.Stack())
+			return
+		}
+		fallthrough
+	case 's':
+		io.WriteString(s, e.Error())
+	case 'q':
+		fmt.Fprintf(s, "%q", e.Error())
+	}
 }
 
 func Recoverer(prefix string, err *error) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"golang.org/x/sync/errgroup"
@@ -58,5 +59,68 @@ func TestSimpleWithGoroutine(t *testing.T) {
 
 	if expected, actual := err.Error(), "ng hmm"; expected != actual {
 		t.Errorf("expected message is %q, but actual is %q", expected, actual)
+	}
+}
+
+func TestVerboseFormat(t *testing.T) {
+	err := func() (err error) {
+		defer Recoverer("err", &err)
+		panic("content")
+	}()
+
+	t.Run("s", func(t *testing.T) {
+		if expected, actual := "!! err content", fmt.Sprintf("!! %s", err); expected != actual {
+			t.Errorf("expected message is %q, but actual is %q", expected, actual)
+		}
+	})
+	t.Run("v", func(t *testing.T) {
+		if expected, actual := "!! err content", fmt.Sprintf("!! %v", err); expected != actual {
+			t.Errorf("expected message is %q, but actual is %q", expected, actual)
+		}
+	})
+	t.Run("+v", func(t *testing.T) {
+		if expected, actual := "!! err content\ngoroutine ", fmt.Sprintf("!! %+v", err); !strings.HasPrefix(actual, expected) {
+			t.Errorf("expected message is %q, but actual is %q", expected, actual)
+		}
+	})
+
+	w := &wrap{inner: err, tag: "@@@@"}
+	t.Run("wrap s", func(t *testing.T) {
+		if expected, actual := "!!  err content", fmt.Sprintf("!! %s", w); expected != actual {
+			t.Errorf("expected message is %q, but actual is %q", expected, actual)
+		}
+	})
+	t.Run("wrap v", func(t *testing.T) {
+		// This is go's securty feature? ()
+		if expected, actual := "!! ", fmt.Sprintf("!! %v", w); expected != actual {
+			t.Errorf("expected message is %q, but actual is %q", expected, actual)
+		}
+	})
+	t.Run("wrap +v", func(t *testing.T) {
+		if expected, actual := "!! @@@@ err content\ngoroutine ", fmt.Sprintf("!! %+v", w); !strings.HasPrefix(actual, expected) {
+			t.Errorf("expected message is %q, but actual is %q", expected, actual)
+		}
+
+	})
+}
+
+type wrap struct {
+	tag   string
+	inner error
+}
+
+func (w wrap) Format(s fmt.State, verb rune) {
+	switch verb {
+	case 'v':
+		if s.Flag('+') {
+			fmt.Fprintf(s, "%s %+v", w.tag, w.inner)
+			return
+		}
+		fallthrough
+	default:
+	case 's':
+		fmt.Fprintf(s, "%s", w.inner)
+	case 'q':
+		fmt.Fprintf(s, "%q", w.inner)
 	}
 }
