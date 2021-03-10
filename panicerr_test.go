@@ -86,7 +86,7 @@ func TestVerboseFormat(t *testing.T) {
 
 	w := &wrap{inner: err, tag: "@@@@"}
 	t.Run("wrap s", func(t *testing.T) {
-		if expected, actual := "!!  err content", fmt.Sprintf("!! %s", w); expected != actual {
+		if expected, actual := "!! err content", fmt.Sprintf("!! %s", w); expected != actual {
 			t.Errorf("expected message is %q, but actual is %q", expected, actual)
 		}
 	})
