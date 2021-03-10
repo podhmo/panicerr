@@ -5,13 +5,16 @@ import (
 	"runtime/debug"
 )
 
+var ErrFormat = "%s %s"
+
 type Err struct {
-	inner error
-	stack []byte
+	prefix string
+	inner  error
+	stack  []byte
 }
 
 func (e *Err) Error() string {
-	return e.inner.Error()
+	return fmt.Sprintf(ErrFormat, e.prefix, e.inner.Error())
 }
 func (e *Err) Stack() string {
 	// return (*(*string)(unsafe.Pointer(&e.stack))
@@ -21,15 +24,15 @@ func (e *Err) Unwrap() error {
 	return e.inner
 }
 
-func Recoverer(err *error) {
+func Recoverer(prefix string, err *error) {
 	r := recover()
 	if r == nil {
 		return
 	}
 	switch r := r.(type) {
 	case error:
-		*err = &Err{inner: r, stack: debug.Stack()}
+		*err = &Err{prefix: prefix, inner: r, stack: debug.Stack()}
 	default:
-		*err = &Err{inner: fmt.Errorf("%+v", r), stack: debug.Stack()}
+		*err = &Err{prefix: prefix, inner: fmt.Errorf("%+v", r), stack: debug.Stack()}
 	}
 }
