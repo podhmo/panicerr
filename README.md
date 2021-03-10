@@ -6,12 +6,12 @@ convert panic to error
 func TestSimpleWithGoroutine(t *testing.T) {
 	g, _ := errgroup.WithContext(context.Background())
 	g.Go(func() (err error) {
-		defer Recoverer(&err)
+		defer Recoverer("ok", &err)
 		t.Log("ok")
 		return nil
 	})
 	g.Go(func() (err error) {
-		defer Recoverer(&err)
+		defer Recoverer("ng", &err)
 		t.Log("ng")
 		panic("hmm")
 	})
